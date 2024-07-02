@@ -1,0 +1,162 @@
+15>
+def p() = {
+val data = List(1, 2, 3, 4, 5)
+val rc = sc.parallelize(data)
+val updatedFold = rc.fold(0)((a, b) => a + b + 100)
+val updatedAggr = rc.aggregate(0)((a, b) => a + b + 100, (a1, a2) => a1 + a2)
+println("Using fold: " + updatedFold)
+println("Using aggregate: " + updatedAggr)
+}
+p()
+
+
+16>
+def prog16()={
+        val path="./text.txt"
+        val inputfile=sc.textFile(path)
+        val words=inputfile.flatMap((line)=>line.split("\\W+"))
+        val wordCount=words.map((word)=>(word.toLowerCase(), 1)).reduceByKey(+)
+        val ans=wordCount.filter{case(word, count)=>count>4}
+        ans.collect().foreach{case(word, count)=>println(s"$word -> $count")}
+    }
+
+
+17>
+
+object prog17{
+    def prog17()={
+        val path="./text.txt"
+        val inputFile=sc.textFile(path)
+        val words=inputFile.flatMap((line)=>line.split("\\W+"))
+        val allWords=words.map((word)=>(word.toLowerCase(), 1)).reduceByKey(+)
+        allWords.collect().foreach{case(word, count)=>println(s"$word -> $count")}
+    }
+
+
+18>
+def prog18()={
+    val path="./tweets.json"
+    val jsoninput=spark.read.json(path)
+    val input=jsoninput.select("user").rdd.map((row)=>row.getString(0))
+    val inputUser=input.map((user)=>(user, 1)).reduceByKey(+)
+    val ans=inputUser.sortBy(_._2, ascending=false).take(10)
+    ans.foreach{case(key, count)=>println(s"$key -> $count")}
+}
+
+19. Simulate the following scenario using Spark streaming. There will be 
+a process which will be streaming lines of text to a unix port using 
+socket communication. The process we can use for this purpose is 
+netcat. It will stream lines typed on the console to a unix socket. The 
+spark application needs to read the lines from the specified port, 
+and it needs to produce the word counts on the console. A batch 
+interval of 5 second can be used.
+spark-shell 
+scala> import org.apache.spark.streaming.{StreamingContext, 
+Seconds}
+scala> val ssc =new StreamingContext(sc, Seconds (2))
+scala> val streams= ssc.socketTextStream("localhost", 4444, 
+org.apache.spark.storage.StorageLevel.MEMORY_ONLY)
+scala> val wordcount =streams.flatMap(_.split(" ")).map(w=> 
+(w,1)).reduceByKey(_+_)
+scala> wordcount.print
+scala> ssc.start
+Terminal 2:
+nc -lk 4444
+
+20.
+def prog20()={
+    val array=Array(
+        ("Joe", "Maths", 83), ("Joe", "Physics", 74), ("Joe", "Chemistry", 91), ("Joe", "Biology", 82),
+        ("Nik", "Maths", 69), ("Nik", "Physics", 62), ("Nik", "Chemistry", 97), ("Nik", "Biology", 80)
+    )
+    val rdd=sc.parallelize(array)
+    val rdd2=rdd.map{case(name, subject, mark)=>(name, mark)}
+    val rdd3=rdd2.combineByKey(
+        (mark:Int)=>(mark, 1),
+        (acc:(Int, Int), mark:Int)=>(acc._1+mark, acc._2+1),
+        (acc1:(Int, Int), acc2:(Int, Int))=>(acc1._1+acc2._1, acc1._2+acc2._2)
+    )
+    val rdd4=rdd3.map{case(name, (sum, count))=>(name, sum.toDouble/count)}
+    rdd4.foreach{case(name, avg)=>println(s"$name -> $avg")}
+}
+
+21>
+
+
+
+
+
+
+
+22>
+def prog22()={
+    val path="./numbers.csv"
+    val inputFile=sc.textFile(path)
+    val rdd=inputFile.flatMap((line)=>line.split("\\s+"))
+    val rdd2=rdd.map((num)=>num.toInt)
+    val sum=rdd2.reduce(+)
+    val count=rdd2.count()
+    println(sum.toDouble/count)
+}
+
+23>
+
+def prog23()={
+    val data=Array(1,2,3,7,5,6,8,90,2,3,43,4)
+    val rdd=sc.parallelize(data, 3)
+    rdd.glom().foreach(arr=>println(arr.mkString(", ")))
+
+    val rdd2=rdd.mapPartitionsWithIndex((index, itr)=>
+    itr.map((element)=>(index, element+1)))
+
+    val rdd3=rdd2.collect()
+    rdd3.foreach{case(index, element)=>println(s"$index - $element")}
+}
+23
+
+24>
+def prog24()={
+    val data=Map(
+        "Ball"->10,
+         "Ribbon"->50,
+          "Box"->20,
+           "Pen"->5,
+            "Book"->8,
+             "Dairy"->4,
+             "Pin"->20
+    )
+    val rdd=sc.parallelize(data.toSeq)
+    val parts=rdd.getNumPartitions
+    println("partitions = "+parts)
+
+    val rdd2=rdd.mapPartitionsWithIndex((index, itr)=>
+    itr.map((element)=>(index, element)))
+    rdd2.collect().foreach{case(index, element)=>println(s"$index -> $element")}
+}
+
+25>
+def prog25()={
+    val data=Map(
+        "Ball"->10,
+        "Ribbon"->50,
+        "Box"->20,
+        "Pen"->5,
+        "Book"->8,
+        "Dairy"->4,
+        "Pin"->20
+        )
+    val rdd=sc.parallelize(data.toSeq, 3)
+    val parts=rdd.getNumPartitions
+    println("partitions = "+parts)
+
+    val rdd2=rdd.mapPartitionsWithIndex((index, itr)=>
+    Iterator((index, itr.toList)))
+    rdd2.collect().foreach{case(index, itr)=>{
+        println(s"Partition $index :-")
+        itr.map((element)=>{
+            print(s"$element ")
+            })
+            println()
+    }
+    }
+}
